@@ -5,8 +5,11 @@
 package it.polito.tdp.extflightdelays;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -35,13 +38,13 @@ public class ExtFlightDelaysController {
     private Button btnAnalizza; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbBoxAeroportoPartenza"
-    private ComboBox<?> cmbBoxAeroportoPartenza; // Value injected by FXMLLoader
+    private ComboBox<Airport> cmbBoxAeroportoPartenza; // Value injected by FXMLLoader
 
     @FXML // fx:id="btnAeroportiConnessi"
     private Button btnAeroportiConnessi; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbBoxAeroportoDestinazione"
-    private ComboBox<?> cmbBoxAeroportoDestinazione; // Value injected by FXMLLoader
+    private ComboBox<Airport> cmbBoxAeroportoDestinazione; // Value injected by FXMLLoader
 
     @FXML // fx:id="numeroTratteTxtInput"
     private TextField numeroTratteTxtInput; // Value injected by FXMLLoader
@@ -51,12 +54,43 @@ public class ExtFlightDelaysController {
 
     @FXML
     void doAnalizzaAeroporti(ActionEvent event) {
-
+    	this.txtResult.clear();
+    	
+    	try {
+    		
+    		int compagnieMinimo = Integer.parseInt(this.compagnieMinimo.getText());
+    		
+    		model.creaGrafo(compagnieMinimo);
+    		
+    		List<Airport> airports = new ArrayList<Airport>(model.getGrafo().vertexSet());
+    		
+    		this.txtResult.setText(String.format("Grafo creato: %d vertici - %d archi\n",
+    				model.getGrafo().vertexSet().size(), model.getGrafo().edgeSet().size()));
+    		
+    		this.cmbBoxAeroportoPartenza.getItems().clear();
+    		this.cmbBoxAeroportoPartenza.getItems().addAll(airports);
+    		
+    	} catch (RuntimeException e) {
+    		this.txtResult.setText("ERRORE - input non valido!\n");
+    	}
     }
 
     @FXML
     void doCalcolaAeroportiConnessi(ActionEvent event) {
-
+    	this.txtResult.clear();
+    	
+    	Airport airport = this.cmbBoxAeroportoPartenza.getValue();
+    	
+    	if(airport == null) {
+    		txtResult.setText("ERRORE - nessun aeroporto selezionato!\n");
+    		return;
+    	}
+    	
+    	List<Airport> adiacenti = model.stampaRisultato(airport);
+    	this.txtResult.appendText("Aeroporti adiacenti di \"" + airport.getAirportName() + "\":\n");
+    	for(Airport a : adiacenti) {
+    		this.txtResult.appendText(("- " + a.getAirportName() + "\n"));
+    	}
     }
 
     @FXML
@@ -77,6 +111,9 @@ public class ExtFlightDelaysController {
 
     }
     
+    public Model getModel() {
+    	return this.model;
+    }
     
     public void setModel(Model model) {
   		this.model = model;

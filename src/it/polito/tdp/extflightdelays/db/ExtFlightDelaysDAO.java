@@ -10,6 +10,7 @@ import java.util.List;
 
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
+import it.polito.tdp.extflightdelays.model.AirportIdMap;
 import it.polito.tdp.extflightdelays.model.Flight;
 
 public class ExtFlightDelaysDAO {
@@ -91,4 +92,75 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public List<Airport> getAirports(AirportIdMap airportIdMap, int numCompMin) {
+		String sql = "SELECT * " + 
+				"FROM airports " + 
+				"WHERE ID IN ( " + 
+				"SELECT a.ID " + 
+				"FROM airports AS a, flights as f " + 
+				"WHERE ( f.ORIGIN_AIRPORT_ID = a.ID " + 
+				"OR f.DESTINATION_AIRPORT_ID = a.ID ) " + 
+				"GROUP BY a.ID " + 
+				"HAVING COUNT(DISTINCT f.AIRLINE_ID) >= ? " + 
+				") " + 
+				"ORDER BY AIRPORT ASC";
+		List<Airport> result = new ArrayList<Airport>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, numCompMin);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				Airport airport = airportIdMap.get(new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET")));
+				result.add(airport);
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public double getNumVoli(Airport a1, Airport a2) {
+		String sql = "SELECT COUNT(ID) AS voli " + 
+				"FROM flights " + 
+				"WHERE (( ORIGIN_AIRPORT_ID = ? " + 
+				"AND DESTINATION_AIRPORT_ID = ? ) " + 
+				"OR ( ORIGIN_AIRPORT_ID = ? " + 
+				"AND DESTINATION_AIRPORT_ID = ? ))";
+		
+		double result = 0.0;
+		
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, a1.getId());
+			st.setInt(2, a2.getId());
+			st.setInt(3, a2.getId());
+			st.setInt(4, a1.getId());
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result = rs.getDouble("voli");
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
 }
